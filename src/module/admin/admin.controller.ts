@@ -1,6 +1,7 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, UseInterceptors } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { ConfigService } from '@nestjs/config';
+import { CacheInterceptor } from '@nestjs/cache-manager';
 
 @Controller('admin')
 export class AdminController {
@@ -10,6 +11,7 @@ export class AdminController {
   ) {}
 
   @Get('/transactions')
+  @UseInterceptors(CacheInterceptor)
   async getTransactions() {
     return this.adminService.getAllTransactions();
   }

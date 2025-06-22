@@ -4,8 +4,6 @@ import { PrismaService } from 'nestjs-prisma';
 
 @Injectable()
 export class UserRepository {
-  private readonly logger = new Logger(UserRepository.name);
-
   constructor(private readonly prisma: PrismaService) {}
 
   async getUserById(id: number): Promise<User | null> {

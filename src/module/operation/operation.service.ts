@@ -67,6 +67,7 @@ export class OperationService {
       });
       await this.cacheManager.del(`/user/${senderId}/balance`);
       await this.cacheManager.del(`/user/${receiverId}/balance`);
+      await this.cacheManager.del(`/admin/transactions`);
       return operation;
     });
   }
