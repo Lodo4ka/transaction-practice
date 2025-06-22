@@ -15,23 +15,21 @@ datasource db {
 
 model User {
   id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
   name      String
-  balance   Int      @default(0)
+  balance   Decimal    @default(0.00)
   version   Int      @default(1)
-  operationsSender Operation[] @relation("Sender")
-  operationsReceiver Operation[] @relation("Receiver")
+  sent      Operation[] @relation("Sender")
+  received  Operation[] @relation("Receiver")
 }
 
 model Operation {
   id        Int      @id @default(autoincrement())
   amount    Int
-  userIdSender Int
-  userIdReceiver Int
-  userSender User @relation("Sender", fields: [userIdSender], references: [id])
-  userReceiver User @relation("Receiver", fields: [userIdReceiver], references: [id])
-  date        DateTime @default(now())
+  senderId    Int      @map("sender_id")
+  receiverId  Int      @map("receiver_id")
+  sender      User     @relation("Sender", fields: [senderId], references: [id])
+  receiver    User     @relation("Receiver", fields: [receiverId], references: [id])
+  createdAt        DateTime @default(now())
   status      OperationStatus @default(PENDING)
 }
 
