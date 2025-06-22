@@ -7,7 +7,6 @@ import { PrismaModule } from 'nestjs-prisma';
 import { createKeyv } from '@keyv/redis';
 import { UserModule } from './module/user/user.module';
 import { AdminModule } from './module/admin/admin.module';
-import { TransactionModule } from './module/transaction/transaction.module';
 import { OperationModule } from './module/operation/operation.module';
 
 @Module({
@@ -46,7 +45,6 @@ import { OperationModule } from './module/operation/operation.module';
       inject: [ConfigService],
     }),
     UserModule,
-    TransactionModule,
     AdminModule,
     OperationModule,
   ],
