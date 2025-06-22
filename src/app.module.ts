@@ -5,6 +5,10 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from 'nestjs-prisma';
 import { createKeyv } from '@keyv/redis';
+import { UserModule } from './module/user/user.module';
+import { AdminModule } from './module/admin/admin.module';
+import { TransactionModule } from './module/transaction/transaction.module';
+import { OperationModule } from './module/operation/operation.module';
 
 @Module({
   imports: [
@@ -41,6 +45,10 @@ import { createKeyv } from '@keyv/redis';
       },
       inject: [ConfigService],
     }),
+    UserModule,
+    TransactionModule,
+    AdminModule,
+    OperationModule,
   ],
   controllers: [AppController],
   providers: [AppService],
