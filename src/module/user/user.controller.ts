@@ -1,20 +1,15 @@
-import { Controller, Get, NotFoundException, Param } from '@nestjs/common';
+import { Controller, Get, Param, UseInterceptors } from '@nestjs/common';
 import { UserService } from './user.service';
+import { CacheInterceptor } from '@nestjs/cache-manager';
 
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Get(':id/balance')
+  @UseInterceptors(CacheInterceptor)
   async getBalance(@Param('id') id: string) {
-    try {
-      const balance = await this.userService.getBalance(id);
-      return { balance };
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw new NotFoundException(error.message);
-      }
-      throw error;
-    }
+    const balance = await this.userService.getBalance(id);
+    return { balance };
   }
 }

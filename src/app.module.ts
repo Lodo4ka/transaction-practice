@@ -35,6 +35,7 @@ import { OperationModule } from './module/operation/operation.module';
         const url = `redis://${host}:${port}`;
 
         return {
+          ttl: 60 * 1000,
           stores: [
             createKeyv({
               url,
