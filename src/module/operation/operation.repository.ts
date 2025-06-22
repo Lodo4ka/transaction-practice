@@ -1,17 +1,28 @@
 import { Injectable } from '@nestjs/common';
-import { Operation } from '@prisma/client';
+import { Operation, Prisma } from '@prisma/client';
 import { PrismaService } from 'nestjs-prisma';
-import { CreateOperationDto } from './dto/create-operation';
+import { SearchHistoryDto } from './dto/search-history';
 
 @Injectable()
 export class OperationRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async createOperation(data: CreateOperationDto): Promise<Operation> {
-    const newOperation = await this.prisma.operation.create({
-      data,
+  async getFilteredOperations(
+    searchHistory: SearchHistoryDto,
+  ): Promise<Operation[]> {
+    const { date, userId } = searchHistory;
+    const where: Prisma.OperationWhereInput = {};
+    if (date) {
+      where.createdAt = date;
+    }
+    if (userId) {
+      where.OR = [{ senderId: userId }, { receiverId: userId }];
+    }
+    return this.prisma.operation.findMany({
+      orderBy: {
+        createdAt: 'desc',
+      },
+      where,
     });
-
-    return newOperation;
   }
 }

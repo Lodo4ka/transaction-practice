@@ -4,13 +4,22 @@ import { Operation, OperationStatus } from '@prisma/client';
 import { PrismaService } from 'nestjs-prisma';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { CacheManagerStore } from 'cache-manager';
+import { SearchHistoryDto } from './dto/search-history';
+import { OperationRepository } from './operation.repository';
 
 @Injectable()
 export class OperationService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly operationRepository: OperationRepository,
     @Inject(CACHE_MANAGER) private cacheManager: CacheManagerStore,
   ) {}
+
+  async getFilteredOperations(
+    searchHistory: SearchHistoryDto,
+  ): Promise<Operation[]> {
+    return this.operationRepository.getFilteredOperations(searchHistory);
+  }
 
   async createOperation(data: CreateOperationDto): Promise<Operation> {
     const { amount, senderId, receiverId } = data;
