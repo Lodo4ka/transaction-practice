@@ -7,6 +7,10 @@ import { SearchHistoryDto } from './dto/search-history';
 export class OperationRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  getAllTransactions(): Promise<Operation[]> {
+    return this.prisma.operation.findMany();
+  }
+
   async getFilteredOperations(
     searchHistory: SearchHistoryDto,
   ): Promise<Operation[]> {
