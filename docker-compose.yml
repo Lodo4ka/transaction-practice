@@ -13,6 +13,8 @@ services:
       - redis
     env_file:
       - .env
+    environment:
+      - REDIS_HOST=redis
     command: npm run start:dev
     volumes:
       - ./src:/app/src

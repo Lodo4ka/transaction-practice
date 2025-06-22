@@ -10,7 +10,7 @@ export class AppController {
     return this.appService.getHello();
   }
 
-  @Get('cache')
+  @Get('test/cache')
   getHelloWithCache(): Promise<string> {
     return this.appService.getHelloWithCache();
   }
