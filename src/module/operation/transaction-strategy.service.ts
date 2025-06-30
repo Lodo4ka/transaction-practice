@@ -19,6 +19,18 @@ export class TransactionStrategyService {
     private readonly configService: ConfigService,
   ) {}
 
+  validateSender(
+    userSender: Partial<User> | null,
+    amount: number,
+  ): asserts userSender is Partial<User> {
+    if (!userSender) {
+      throw new BadRequestException('Sender not found');
+    }
+    if (userSender.balance?.lessThan(amount)) {
+      throw new BadRequestException('Insufficient balance');
+    }
+  }
+
   getCurrentIsolationLevel() {
     return (
       this.configService.get<IsolationLevel>('ISOLATION_LEVEL') ??
@@ -116,12 +128,7 @@ export class TransactionStrategyService {
             version: true,
           },
         });
-        if (!userSender) {
-          throw new BadRequestException('Sender not found');
-        }
-        if (userSender.balance.lessThan(amount)) {
-          throw new BadRequestException('Insufficient balance');
-        }
+        this.validateSender(userSender, amount);
         const updatedSender = await tx.user.update({
           where: { id: userSender.id, version: userSender.version },
           data: {
@@ -171,10 +178,13 @@ export class TransactionStrategyService {
       },
     );
   }
-  // Атомарная блокировка — это неформальный термин, который иногда используют для описания ситуации, когда изменение ресурса (например, строки в базе данных) происходит как единое, неделимое действие, и никакая другая операция не может "вклиниться" в этот процесс. В классических реляционных СУБД такого отдельного механизма нет — обычно используют либо пессимистичную, либо оптимистичную блокировку.
-  // В данном случае мы используем атомарную блокировку, чтобы избежать ситуации, когда одна операция "вклинивается" в другую и изменяет данные.
-  // Для этого мы используем транзакцию, которая будет выполняться как единое целое, и никакая другая операция не может "вклиниться" в этот процесс.
-  // Для этого мы используем транзакцию, которая будет выполняться как единое целое, и никакая другая операция не может "вклиниться" в этот процесс.
+  /**
+   * Атомарные изменения — это операции, которые выполняются как единое, неделимое действие:
+   * либо все изменения применяются, либо ни одно не применяется (откат). Это гарантирует целостность данных
+   * даже при сбоях или ошибках в процессе выполнения транзакции.
+   * В данном методе перевод средств между пользователями происходит в рамках одной транзакции,
+   * что обеспечивает атомарность операции.
+   */
   async atomicLock({
     amount,
     senderId,
@@ -191,14 +201,48 @@ export class TransactionStrategyService {
             version: true,
           },
         });
-        if (!userSender) {
-          throw new Error('Sender not found');
-        }
-        if (userSender.balance.lessThan(amount)) {
-          throw new Error('Insufficient balance');
-        }
+        this.validateSender(userSender, amount);
+        await tx.$queryRaw<void>`
+        UPDATE "User" SET balance = balance - ${amount} WHERE id = ${senderId};
+        UPDATE "User" SET balance = balance + ${amount} WHERE id = ${receiverId};
+        `;
+        const operation = await tx.operation.create({
+          data: {
+            amount,
+            senderId,
+            receiverId,
+            status: OperationStatus.SUCCESS,
+          },
+        });
+        await this.clearCacheRedis(senderId, receiverId);
+        return operation;
+      },
+      {
+        isolationLevel,
+      },
+    );
+  }
+
+  /**
+   * Изоляция транзакции — это свойство, гарантирующее, что параллельные транзакции не влияют друг на друга
+   * и выполняются так, как будто они происходят последовательно. Это предотвращает проблемы гонок,
+   * грязного чтения, неповторяющихся и фантомных чтений.
+   * В данном методе используется максимальный уровень изоляции (SERIALIZABLE), чтобы обеспечить корректность
+   * и целостность переводов между пользователями даже при высокой конкуренции.
+   */
+  async isolationLock({
+    amount,
+    senderId,
+    receiverId,
+  }: TransactionPayload): Promise<Operation> {
+    return this.prisma.$transaction(
+      async (tx) => {
+        const userSender = await tx.user.findUnique({
+          where: { id: senderId },
+        });
+        this.validateSender(userSender, amount);
         await tx.user.update({
-          where: { id: userSender.id },
+          where: { id: senderId },
           data: {
             balance: { decrement: amount },
           },
@@ -221,17 +265,9 @@ export class TransactionStrategyService {
         return operation;
       },
       {
-        isolationLevel,
+        isolationLevel: IsolationLevel.SERIALIZABLE,
       },
     );
-  }
-
-  async isolationLock({
-    amount,
-    senderId,
-    receiverId,
-  }: TransactionPayload): Promise<Operation> {
-    return Promise.reject(new Error('Not implemented'));
   }
 
   runTransaction({ amount, senderId, receiverId }: TransactionPayload) {
